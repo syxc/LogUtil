@@ -1,6 +1,6 @@
 package org.syxc.util;
 
-enum DateFormater {
+public enum DateFormater {
 
     NORMAL("yyyy-MM-dd HH:mm"),
     DD("yyyy-MM-dd"),
