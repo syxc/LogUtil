@@ -74,13 +74,13 @@ public final class LogUtil {
 			final StackTraceElement tag = new Throwable().fillInStackTrace().getStackTrace()[2];
 			
 			msg = new StringBuilder().append("\r\n")
-					.append(getDateformat(Dateformater.SS.getValue()))
+					.append(getDateformat(DateFormater.SS.getValue()))
 					.append(logMap.get(type)).append(tag.getClassName())
 					.append(" - ").append(tag.getMethodName()).append("(): ")
 					.append(msg).toString();
 
 			final String fileName = new StringBuffer().append("test-")
-					.append(getDateformat(Dateformater.DD.getValue()))
+					.append(getDateformat(DateFormater.DD.getValue()))
 					.append(".log").toString();
 			
 			recordLog(Config.LOG_DIR, fileName, msg, true);

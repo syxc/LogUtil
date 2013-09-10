@@ -1,18 +1,18 @@
 package org.syxc.util;
 
-enum Dateformater {
-	
-	NORMAL("yyyy-MM-dd HH:mm"), 
-	DD("yyyy-MM-dd"), 
-	SS("yyyy-MM-dd HH:mm:ss");
+enum DateFormater {
 
-	private String value;
+    NORMAL("yyyy-MM-dd HH:mm"),
+    DD("yyyy-MM-dd"),
+    SS("yyyy-MM-dd HH:mm:ss");
 
-	private Dateformater(String value) {
-		this.value = value;
-	}
+    private String value;
 
-	public String getValue() {
-		return value;
-	}
+    private DateFormater(String value) {
+        this.value = value;
+    }
+
+    public String getValue() {
+        return value;
+    }
 }

@@ -1,2 +1,8 @@
-/gen
-/bin
+gen
+bin
+out
+.idea
+*.iml
+Thumbs.db
+.DS_Store
+!.gitkeep

@@ -9,7 +9,7 @@ public class App extends Application {
 	@Override
 	public void onCreate() {
 		super.onCreate();
-		LogUtil.logoff = false;
-		LogUtil.level = Log.ERROR;
+		LogUtil.logoff = true;
+		LogUtil.level = Log.VERBOSE;
 	}
 }
