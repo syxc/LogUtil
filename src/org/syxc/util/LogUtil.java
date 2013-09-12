@@ -74,13 +74,13 @@ public final class LogUtil {
 			final StackTraceElement tag = new Throwable().fillInStackTrace().getStackTrace()[2];
 			
 			msg = new StringBuilder().append("\r\n")
-					.append(getDateformat(DateFormater.SS.getValue()))
+					.append(getDateFormat(DateFormater.SS.getValue()))
 					.append(logMap.get(type)).append(tag.getClassName())
 					.append(" - ").append(tag.getMethodName()).append("(): ")
 					.append(msg).toString();
 
 			final String fileName = new StringBuffer().append("test-")
-					.append(getDateformat(DateFormater.DD.getValue()))
+					.append(getDateFormat(DateFormater.DD.getValue()))
 					.append(".log").toString();
 			
 			recordLog(Config.LOG_DIR, fileName, msg, true);
@@ -96,8 +96,7 @@ public final class LogUtil {
 	 * @param msg Log content
 	 * @param bool Save as type, false override save, true before file add save
 	 */
-	private static void recordLog(String logDir, String fileName, String msg,
-			boolean bool) {
+	private static void recordLog(String logDir, String fileName, String msg, boolean bool) {
 		try {
 			createDir(logDir);
 			final File saveFile = new File(new StringBuffer().append(logDir)
@@ -130,7 +129,7 @@ public final class LogUtil {
 		}
 	}
 
-	private static String getDateformat(String pattern) {
+	private static String getDateFormat(String pattern) {
 		final DateFormat format = new SimpleDateFormat(pattern);
 		return format.format(new Date());
 	}
