@@ -42,39 +42,6 @@ public final class Logger {
         level = Config.LOG_LEVEL;
     }
 
-//    /**
-//     * Custom Log output style
-//     *
-//     * @param type Log type
-//     * @param tag  TAG
-//     * @param msg  Log message
-//     */
-//    public static void trace(int type, String tag, String msg) {
-//        // LogCat
-//        if (DEBUG) {
-//            switch (type) {
-//                case Log.VERBOSE:
-//                    Log.v(tag, msg);
-//                    break;
-//                case Log.DEBUG:
-//                    Log.d(tag, msg);
-//                    break;
-//                case Log.INFO:
-//                    Log.i(tag, msg);
-//                    break;
-//                case Log.WARN:
-//                    Log.w(tag, msg);
-//                    break;
-//                case Log.ERROR:
-//                    Log.e(tag, msg);
-//                    break;
-//            }
-//        }
-//        // Write to file
-//        if (type >= level) {
-//            writeLog(type, msg);
-//        }
-//    }
 
     public static void v(String tag, String msg) {
         if (DEBUG) {
@@ -105,7 +72,7 @@ public final class Logger {
 
     public static void d(String tag, String msg, Throwable tr) {
         if (DEBUG) {
-            Log.v(tag, msg, tr);
+            Log.d(tag, msg, tr);
         }
         if (Log.DEBUG >= level) {
             writeLog(Log.DEBUG, msg + '\n' + getStackTraceString(tr));
@@ -123,7 +90,7 @@ public final class Logger {
 
     public static void i(String tag, String msg, Throwable tr) {
         if (DEBUG) {
-            Log.v(tag, msg, tr);
+            Log.i(tag, msg, tr);
         }
         if (Log.INFO >= level) {
             writeLog(Log.INFO, msg + '\n' + getStackTraceString(tr));
@@ -141,7 +108,7 @@ public final class Logger {
 
     public static void w(String tag, String msg, Throwable tr) {
         if (DEBUG) {
-            Log.v(tag, msg, tr);
+            Log.w(tag, msg, tr);
         }
         if (Log.WARN >= level) {
             writeLog(Log.WARN, msg + '\n' + getStackTraceString(tr));
@@ -159,19 +126,20 @@ public final class Logger {
 
     public static void e(String tag, String msg, Throwable tr) {
         if (DEBUG) {
-            Log.v(tag, msg, tr);
+            Log.e(tag, msg, tr);
         }
         if (Log.ERROR >= level) {
             writeLog(Log.ERROR, msg + '\n' + getStackTraceString(tr));
         }
     }
 
+
     /**
      * Handy function to get a loggable stack trace from a Throwable
      *
      * @param tr An exception to log
      */
-    public static String getStackTraceString(Throwable tr) {
+    private static String getStackTraceString(Throwable tr) {
         if (tr == null) {
             return "";
         }
