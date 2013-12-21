@@ -1,8 +1,0 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.syxc.util"
-    android:versionCode="20130912"
-    android:versionName="0.2" >
-
-    <uses-sdk android:minSdkVersion="8" />
-
-</manifest>
