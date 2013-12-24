@@ -1,11 +1,12 @@
 package org.syxc.util;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Looper;
-import android.util.Log;
 import android.widget.Toast;
 
 import java.io.File;
@@ -16,6 +17,8 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.Field;
+import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.TreeSet;
@@ -33,11 +36,10 @@ public class CrashHandler implements UncaughtExceptionHandler {
 
     private static final String TAG = "CrashHandler";
 
-    /**
-     * 是否开启日志输出，在Debug状态下开启，
-     * 在Release状态下关闭以提示程序性能
-     */
-    public static final boolean DEBUG = true;
+    private static final String EOL = "\n";
+
+    // 是否开启日志输出，在Debug状态下开启，在Release状态下关闭以提示程序性能
+    private static final boolean DEBUG = true;
 
     private Thread.UncaughtExceptionHandler mDefaultHandler;
 
@@ -45,22 +47,20 @@ public class CrashHandler implements UncaughtExceptionHandler {
 
     private Context mContext;
 
-    /**
-     * 使用Properties来保存设备的信息和错误堆栈信息
-     */
+    // 使用Properties来保存设备的信息和错误堆栈信息
     private Properties mDeviceCrashInfo = new Properties();
     private static final String VERSION_NAME = "versionName";
     private static final String VERSION_CODE = "versionCode";
     private static final String STACK_TRACE = "STACK_TRACE";
 
-    /**
-     * 错误报告文件的扩展名
-     */
-    private static final String CRASH_REPORTER_EXTENSION = ".log";
+    // 错误报告文件的扩展名
+    private static final String CRASH_REPORTER_EXTENSION = ".trace";
 
-    /**
-     * 保证只有一个CrashHandler实例
-     */
+    private static final String MSG_SUBJECT_TAG = "Exception Report"; // "app title + this tag" = email subject
+    private static final String MSG_SENDTO = "gaibing2009@foxmail.com"; // email will be sent to this account
+    private static final String MSG_BODY = "Please help by sending this email. " +
+            "No personal information is being sent (you can check by reading the rest of the email).";
+
     private CrashHandler() {
     }
 
@@ -94,13 +94,12 @@ public class CrashHandler implements UncaughtExceptionHandler {
             try {
                 Thread.sleep(3000);
             } catch (InterruptedException e) {
-                Log.e(TAG, "Error: ", e);
+                Logger.e(TAG, "Error: ", e);
             }
             android.os.Process.killProcess(android.os.Process.myPid());
             System.exit(10);
         }
     }
-
 
     /**
      * 自定义错误处理，收集错误信息，发送错误报告等操作均在此完成，
@@ -113,6 +112,7 @@ public class CrashHandler implements UncaughtExceptionHandler {
         if (ex == null) {
             return false;
         }
+
         final String msg = ex.getLocalizedMessage();
 
         // 使用Toast来显示异常信息
@@ -127,8 +127,10 @@ public class CrashHandler implements UncaughtExceptionHandler {
 
         // 收集设备信息
         collectCrashDeviceInfo(mContext);
+
         // 保存错误报告文件
         String crashFileName = saveCrashInfoToFile(ex);
+
         // 发送错误报告到服务器
         sendCrashReportsToServer(mContext);
 
@@ -162,10 +164,31 @@ public class CrashHandler implements UncaughtExceptionHandler {
     }
 
     private void postReport(File file) {
-        // TODO 使用 HTTP Post 发送错误报告到服务器
-        // 这里不再详述,开发者可以根据OPhoneSDN上的其他网络操作
-        // 教程来提交错误报告
+        sendDebugReport(mContext, file);
     }
+
+    private void sendDebugReport(final Context context, final File file) {
+        final Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+
+        String subject = "crash_report_mail_subject";
+        String body = "crash_report_mail_body" + EOL + EOL;
+
+        ArrayList<Uri> uris = new ArrayList<Uri>();
+
+        Uri uri = Uri.parse(file.getAbsolutePath());
+
+        uris.add(uri);
+
+        intent.setType("plain/text");
+        intent.putExtra(Intent.EXTRA_EMAIL, new String[]{MSG_SENDTO});
+        intent.putExtra(Intent.EXTRA_TEXT, body);
+        intent.putExtra(Intent.EXTRA_SUBJECT, subject);
+
+        intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+
+        context.startActivity(Intent.createChooser(intent, "Send Email Via:"));
+    }
+
 
     /**
      * 获取错误报告文件名
@@ -174,8 +197,8 @@ public class CrashHandler implements UncaughtExceptionHandler {
      * @return
      */
     private String[] getCrashReportFiles(Context ctx) {
-        File filesDir = ctx.getFilesDir();
-        FilenameFilter filter = new FilenameFilter() {
+        final File filesDir = new File(Logger.LOG_DIR); // 获取日志文件存放路径
+        final FilenameFilter filter = new FilenameFilter() {
             @Override
             public boolean accept(File dir, String filename) {
                 return filename.endsWith(CRASH_REPORTER_EXTENSION);
@@ -207,16 +230,21 @@ public class CrashHandler implements UncaughtExceptionHandler {
         mDeviceCrashInfo.put(STACK_TRACE, result);
 
         String fileName = "";
+
         try {
             long timestamp = System.currentTimeMillis();
+
             fileName = "crash-" + timestamp + CRASH_REPORTER_EXTENSION;
             FileOutputStream trace = mContext.openFileOutput(fileName, Context.MODE_PRIVATE);
             mDeviceCrashInfo.store(trace, "");
             trace.flush();
             trace.close();
+
+            fileName = URLEncoder.encode(fileName, "UTF-8");
+
             return fileName;
         } catch (Exception e) {
-            Log.e(TAG, "an error occured while writing report file..." + fileName, e);
+            Logger.e(TAG, "An error occured while writing report file..." + fileName, e);
         }
 
         return null;
@@ -227,7 +255,7 @@ public class CrashHandler implements UncaughtExceptionHandler {
      *
      * @param ctx
      */
-    public void collectCrashDeviceInfo(Context ctx) {
+    private void collectCrashDeviceInfo(Context ctx) {
         try {
             PackageManager pm = ctx.getPackageManager();
             PackageInfo pi = pm.getPackageInfo(ctx.getPackageName(), PackageManager.GET_ACTIVITIES);
@@ -236,7 +264,7 @@ public class CrashHandler implements UncaughtExceptionHandler {
                 mDeviceCrashInfo.put(VERSION_CODE, pi.versionCode);
             }
         } catch (PackageManager.NameNotFoundException e) {
-            Log.e(TAG, "Error while collect package info", e);
+            Logger.e(TAG, "Error while collect package info", e);
         }
 
         // 收集设备信息
@@ -247,10 +275,10 @@ public class CrashHandler implements UncaughtExceptionHandler {
                 field.setAccessible(true);
                 mDeviceCrashInfo.put(field.getName(), field.get(null));
                 if (DEBUG) {
-                    Log.d(TAG, field.getName() + " : " + field.get(null));
+                    Logger.d(TAG, field.getName() + " : " + field.get(null));
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Error while collect crash info", e);
+                Logger.e(TAG, "Error while collect crash info", e);
             }
         }
 

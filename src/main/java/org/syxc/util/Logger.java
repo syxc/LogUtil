@@ -27,19 +27,32 @@ public final class Logger {
 
     private static FileChannel mChannel;
     private static final String LINE_SEPARATOR;
-    private static int BUFFER_SIZE;
-    private static final String LOG_PREFIX;
+    private static final String DOWNLOADS_PATH;
 
-    private static final boolean DEBUG;
-    private static int level;
+    // Log switch open, development, released when closed(LogCat)
+    public static boolean DEBUG;
+
+    // 日志的写入模式，是否重写
+    public static boolean APPEND;
+
+    // Write file level
+    public static int LOG_LEVEL;
+
+    public static int BUFFER_SIZE;
+
+    protected static final String LOG_PREFIX;
+    protected static final String LOG_DIR;
 
     static {
         mChannel = null;
         LINE_SEPARATOR = System.getProperty("line.separator");
-        BUFFER_SIZE = Config.BUFFER_SIZE;
-        LOG_PREFIX = Config.LOG_PREFIX;
-        DEBUG = Config.DEBUG;
-        level = Config.LOG_LEVEL;
+        DOWNLOADS_PATH = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath();
+        DEBUG = true;
+        APPEND = true;
+        LOG_LEVEL = Log.ERROR;
+        BUFFER_SIZE = 1024;
+        LOG_PREFIX = setLogPrefix("");
+        LOG_DIR = setLogPath("");
     }
 
 
@@ -47,7 +60,7 @@ public final class Logger {
         if (DEBUG) {
             Log.v(tag, msg);
         }
-        if (Log.VERBOSE >= level) {
+        if (Log.VERBOSE >= LOG_LEVEL) {
             writeLog(Log.VERBOSE, msg);
         }
     }
@@ -56,7 +69,7 @@ public final class Logger {
         if (DEBUG) {
             Log.v(tag, msg, tr);
         }
-        if (Log.VERBOSE >= level) {
+        if (Log.VERBOSE >= LOG_LEVEL) {
             writeLog(Log.VERBOSE, msg + '\n' + getStackTraceString(tr));
         }
     }
@@ -65,7 +78,7 @@ public final class Logger {
         if (DEBUG) {
             Log.d(tag, msg);
         }
-        if (Log.DEBUG >= level) {
+        if (Log.DEBUG >= LOG_LEVEL) {
             writeLog(Log.DEBUG, msg);
         }
     }
@@ -74,7 +87,7 @@ public final class Logger {
         if (DEBUG) {
             Log.d(tag, msg, tr);
         }
-        if (Log.DEBUG >= level) {
+        if (Log.DEBUG >= LOG_LEVEL) {
             writeLog(Log.DEBUG, msg + '\n' + getStackTraceString(tr));
         }
     }
@@ -83,7 +96,7 @@ public final class Logger {
         if (DEBUG) {
             Log.i(tag, msg);
         }
-        if (Log.INFO >= level) {
+        if (Log.INFO >= LOG_LEVEL) {
             writeLog(Log.INFO, msg);
         }
     }
@@ -92,7 +105,7 @@ public final class Logger {
         if (DEBUG) {
             Log.i(tag, msg, tr);
         }
-        if (Log.INFO >= level) {
+        if (Log.INFO >= LOG_LEVEL) {
             writeLog(Log.INFO, msg + '\n' + getStackTraceString(tr));
         }
     }
@@ -101,7 +114,7 @@ public final class Logger {
         if (DEBUG) {
             Log.w(tag, msg);
         }
-        if (Log.WARN >= level) {
+        if (Log.WARN >= LOG_LEVEL) {
             writeLog(Log.WARN, msg);
         }
     }
@@ -110,7 +123,7 @@ public final class Logger {
         if (DEBUG) {
             Log.w(tag, msg, tr);
         }
-        if (Log.WARN >= level) {
+        if (Log.WARN >= LOG_LEVEL) {
             writeLog(Log.WARN, msg + '\n' + getStackTraceString(tr));
         }
     }
@@ -119,7 +132,7 @@ public final class Logger {
         if (DEBUG) {
             Log.e(tag, msg);
         }
-        if (Log.ERROR >= level) {
+        if (Log.ERROR >= LOG_LEVEL) {
             writeLog(Log.ERROR, msg);
         }
     }
@@ -128,7 +141,7 @@ public final class Logger {
         if (DEBUG) {
             Log.e(tag, msg, tr);
         }
-        if (Log.ERROR >= level) {
+        if (Log.ERROR >= LOG_LEVEL) {
             writeLog(Log.ERROR, msg + '\n' + getStackTraceString(tr));
         }
     }
@@ -193,7 +206,7 @@ public final class Logger {
                     .append(getDateFormat(DateFormater.DD.getValue()))
                     .append(".log").toString();
 
-            recordLog(Config.LOG_DIR, fileName, msg, true);
+            recordLog(LOG_DIR, fileName, msg, APPEND);
 
         } catch (Exception e) {
             Logger.d(TAG, e.getMessage());
@@ -206,9 +219,9 @@ public final class Logger {
      * @param logDir   Log path to save
      * @param fileName
      * @param msg      Log content
-     * @param bool     Save as type, false override save, true before file add save
+     * @param append   Save as type, false override save, true before file add save
      */
-    private static void recordLog(String logDir, String fileName, String msg, boolean bool) {
+    private static void recordLog(String logDir, String fileName, String msg, boolean append) {
         try {
             if (!createDirectory(logDir)) {
                 Logger.d(TAG, "Create directory fail!!!");
@@ -220,15 +233,15 @@ public final class Logger {
                     .append(File.separator)
                     .append(fileName).toString());
 
-            if (!bool && saveFile.exists()) {
+            if (!append && saveFile.exists()) {
                 saveFile.delete();
                 saveFile.createNewFile();
-                write(saveFile, msg, bool);
-            } else if (bool && saveFile.exists()) {
-                write(saveFile, msg, bool);
-            } else if (bool && !saveFile.exists()) {
+                write(saveFile, msg, append);
+            } else if (append && saveFile.exists()) {
+                write(saveFile, msg, append);
+            } else if (append && !saveFile.exists()) {
                 saveFile.createNewFile();
-                write(saveFile, msg, bool);
+                write(saveFile, msg, append);
             }
         } catch (IOException e) {
             Logger.d(TAG, "recordLog fail!!!");
@@ -286,6 +299,13 @@ public final class Logger {
             if (byteBuffer != null) {
                 byteBuffer.clear();
             }
+            if (mChannel != null) {
+                try {
+                    mChannel.close();
+                } catch (IOException e) {
+                    Logger.d(TAG, "Exception closing mChannel: ", e);
+                }
+            }
             if (output != null) {
                 try {
                     output.close();
@@ -294,6 +314,43 @@ public final class Logger {
                 }
             }
         }
+    }
+
+
+    // -----------------------------------
+    // Logger config methods
+    // -----------------------------------
+
+    /**
+     * 设置日志文件名前缀
+     *
+     * @param prefix (prefix-20121212.log)
+     * @return
+     */
+    public static String setLogPrefix(final String prefix) {
+        String str;
+        if (prefix.length() == 0) {
+            str = "logger-";
+        } else {
+            str = new StringBuilder().append(prefix).append("-").toString();
+        }
+        return str;
+    }
+
+    /**
+     * 设置日志文件存放路径
+     *
+     * @param subPath 子路径("/Downloads/subPath")
+     * @return 日志文件路径
+     */
+    public static String setLogPath(final String subPath) {
+        String path;
+        if (subPath.length() == 0) {
+            path = new StringBuilder().append(DOWNLOADS_PATH).append("/logs").toString();
+        } else {
+            path = new StringBuilder().append(DOWNLOADS_PATH).append(subPath).toString();
+        }
+        return path;
     }
 
 }
