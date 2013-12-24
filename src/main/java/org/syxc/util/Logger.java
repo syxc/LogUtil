@@ -1,20 +1,22 @@
 package org.syxc.util;
 
+import android.app.Application;
 import android.os.Environment;
 import android.util.Log;
+import android.util.SparseArray;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
+
+//import org.syxc.util.GlobalExceptionHandler.UncaughtException;
 
 /**
  * A custom Android log class
@@ -25,127 +27,132 @@ public final class Logger {
 
     private static final String TAG = "Logger";
 
-    private static FileChannel mChannel;
-    private static final String LINE_SEPARATOR;
     private static final String DOWNLOADS_PATH;
-
-    // Log switch open, development, released when closed(LogCat)
-    public static boolean DEBUG;
-
-    // 日志的写入模式，是否重写
-    public static boolean APPEND;
-
-    // Write file level
-    public static int LOG_LEVEL;
-
-    public static int BUFFER_SIZE;
 
     protected static final String LOG_PREFIX;
     protected static final String LOG_DIR;
 
+    public static boolean debug = false; // Log switch open, development, released when closed(LogCat)
+    public static int level = Log.ERROR; // Write file level
+
+
     static {
-        mChannel = null;
-        LINE_SEPARATOR = System.getProperty("line.separator");
         DOWNLOADS_PATH = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath();
-        DEBUG = true;
-        APPEND = true;
-        LOG_LEVEL = Log.ERROR;
-        BUFFER_SIZE = 1024;
         LOG_PREFIX = setLogPrefix("");
         LOG_DIR = setLogPath("");
     }
 
 
     public static void v(String tag, String msg) {
-        if (DEBUG) {
-            Log.v(tag, msg);
-        }
-        if (Log.VERBOSE >= LOG_LEVEL) {
-            writeLog(Log.VERBOSE, msg);
-        }
+        trace(Log.VERBOSE, tag, msg);
     }
 
     public static void v(String tag, String msg, Throwable tr) {
-        if (DEBUG) {
-            Log.v(tag, msg, tr);
-        }
-        if (Log.VERBOSE >= LOG_LEVEL) {
-            writeLog(Log.VERBOSE, msg + '\n' + getStackTraceString(tr));
-        }
+        trace(Log.VERBOSE, tag, msg, tr);
     }
 
     public static void d(String tag, String msg) {
-        if (DEBUG) {
-            Log.d(tag, msg);
-        }
-        if (Log.DEBUG >= LOG_LEVEL) {
-            writeLog(Log.DEBUG, msg);
-        }
+        trace(Log.DEBUG, tag, msg);
     }
 
     public static void d(String tag, String msg, Throwable tr) {
-        if (DEBUG) {
-            Log.d(tag, msg, tr);
-        }
-        if (Log.DEBUG >= LOG_LEVEL) {
-            writeLog(Log.DEBUG, msg + '\n' + getStackTraceString(tr));
-        }
+        trace(Log.DEBUG, tag, msg, tr);
     }
 
     public static void i(String tag, String msg) {
-        if (DEBUG) {
-            Log.i(tag, msg);
-        }
-        if (Log.INFO >= LOG_LEVEL) {
-            writeLog(Log.INFO, msg);
-        }
+        trace(Log.INFO, tag, msg);
     }
 
     public static void i(String tag, String msg, Throwable tr) {
-        if (DEBUG) {
-            Log.i(tag, msg, tr);
-        }
-        if (Log.INFO >= LOG_LEVEL) {
-            writeLog(Log.INFO, msg + '\n' + getStackTraceString(tr));
-        }
+        trace(Log.INFO, tag, msg, tr);
     }
 
     public static void w(String tag, String msg) {
-        if (DEBUG) {
-            Log.w(tag, msg);
-        }
-        if (Log.WARN >= LOG_LEVEL) {
-            writeLog(Log.WARN, msg);
-        }
+        trace(Log.WARN, tag, msg);
     }
 
     public static void w(String tag, String msg, Throwable tr) {
-        if (DEBUG) {
-            Log.w(tag, msg, tr);
-        }
-        if (Log.WARN >= LOG_LEVEL) {
-            writeLog(Log.WARN, msg + '\n' + getStackTraceString(tr));
-        }
+        trace(Log.WARN, tag, msg, tr);
     }
 
     public static void e(String tag, String msg) {
-        if (DEBUG) {
-            Log.e(tag, msg);
-        }
-        if (Log.ERROR >= LOG_LEVEL) {
-            writeLog(Log.ERROR, msg);
-        }
+        trace(Log.ERROR, tag, msg);
     }
 
     public static void e(String tag, String msg, Throwable tr) {
-        if (DEBUG) {
-            Log.e(tag, msg, tr);
+        trace(Log.ERROR, tag, msg, tr);
+    }
+
+
+    /**
+     * Custom Log output style
+     *
+     * @param type Log type
+     * @param tag  TAG
+     * @param msg  Log message
+     */
+    private static void trace(final int type, String tag, final String msg) {
+        // LogCat
+        if (debug) {
+            switch (type) {
+                case Log.VERBOSE:
+                    Log.v(tag, msg);
+                    break;
+                case Log.DEBUG:
+                    Log.d(tag, msg);
+                    break;
+                case Log.INFO:
+                    Log.i(tag, msg);
+                    break;
+                case Log.WARN:
+                    Log.w(tag, msg);
+                    break;
+                case Log.ERROR:
+                    Log.e(tag, msg);
+                    break;
+            }
         }
-        if (Log.ERROR >= LOG_LEVEL) {
-            writeLog(Log.ERROR, msg + '\n' + getStackTraceString(tr));
+        // Write to file
+        if (type >= level) {
+            writeLog(type, msg);
         }
     }
 
+    /**
+     * Custom Log output style
+     *
+     * @param type
+     * @param tag
+     * @param msg
+     * @param tr
+     */
+    private static void trace(final int type, final String tag,
+                              final String msg, final Throwable tr) {
+        // LogCat
+        if (debug) {
+            switch (type) {
+                case Log.VERBOSE:
+                    Log.v(tag, msg);
+                    break;
+                case Log.DEBUG:
+                    Log.d(tag, msg);
+                    break;
+                case Log.INFO:
+                    Log.i(tag, msg);
+                    break;
+                case Log.WARN:
+                    Log.w(tag, msg);
+                    break;
+                case Log.ERROR:
+                    Log.e(tag, msg);
+                    break;
+            }
+        }
+        // Write to file
+        if (type >= level) {
+            writeLog(type, msg + '\n' + getStackTraceString(tr));
+        }
+    }
 
     /**
      * Handy function to get a loggable stack trace from a Throwable
@@ -175,7 +182,7 @@ public final class Logger {
     }
 
     /**
-     * Write log file to the sdcard
+     * Write log file to the SDCard
      *
      * @param type
      * @param msg
@@ -184,9 +191,9 @@ public final class Logger {
         if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
             return;
         }
-        try {
-            final HashMap<Integer, String> logMap = new HashMap<Integer, String>();
 
+        try {
+            SparseArray<String> logMap = new SparseArray<String>();
             logMap.put(Log.VERBOSE, " VERBOSE ");
             logMap.put(Log.DEBUG, " DEBUG ");
             logMap.put(Log.INFO, " INFO ");
@@ -196,6 +203,7 @@ public final class Logger {
             final StackTraceElement tag = new Throwable().fillInStackTrace().getStackTrace()[2];
 
             msg = new StringBuilder()
+                    .append("\r\n")
                     .append(getDateFormat(DateFormater.SS.getValue()))
                     .append(logMap.get(type)).append(tag.getClassName())
                     .append(" - ").append(tag.getMethodName()).append("(): ")
@@ -206,10 +214,9 @@ public final class Logger {
                     .append(getDateFormat(DateFormater.DD.getValue()))
                     .append(".log").toString();
 
-            recordLog(LOG_DIR, fileName, msg, APPEND);
-
+            recordLog(LOG_DIR, fileName, msg, true);
         } catch (Exception e) {
-            Logger.d(TAG, e.getMessage());
+            Logger.e("Logger: ", e.getMessage());
         }
     }
 
@@ -223,14 +230,11 @@ public final class Logger {
      */
     private static void recordLog(String logDir, String fileName, String msg, boolean append) {
         try {
-            if (!createDirectory(logDir)) {
-                Logger.d(TAG, "Create directory fail!!!");
-                return;
-            }
+            createDir(logDir);
 
             final File saveFile = new File(new StringBuffer()
                     .append(logDir)
-                    .append(File.separator)
+                    .append("/")
                     .append(fileName).toString());
 
             if (!append && saveFile.exists()) {
@@ -242,9 +246,19 @@ public final class Logger {
             } else if (append && !saveFile.exists()) {
                 saveFile.createNewFile();
                 write(saveFile, msg, append);
+            } else if (!append && !saveFile.exists()) {
+                saveFile.createNewFile();
+                write(saveFile, msg, append);
             }
         } catch (IOException e) {
-            Logger.d(TAG, "recordLog fail!!!");
+            recordLog(logDir, fileName, msg, append);
+        }
+    }
+
+    public static void processGlobalException(Application application, boolean isWriteIntoFile) {
+        if (application != null) {
+            CrashHandler handler = new CrashHandler(application, isWriteIntoFile);
+            Thread.setDefaultUncaughtExceptionHandler(handler);
         }
     }
 
@@ -253,19 +267,12 @@ public final class Logger {
         return format.format(new Date());
     }
 
-    /**
-     * Create directory
-     *
-     * @param dir file path
-     * @return true: success  false: fail
-     */
-    private static boolean createDirectory(String dir) {
+    private static File createDir(String dir) {
         final File file = new File(dir);
-        boolean flag = false;
         if (!file.exists()) {
-            flag = file.mkdirs();
+            file.mkdirs();
         }
-        return flag;
+        return file;
     }
 
     /**
@@ -275,45 +282,49 @@ public final class Logger {
      * @param msg
      * @param append
      */
-    private static void write(final File file, String msg, boolean append) {
-        FileOutputStream output = null;
-        ByteBuffer byteBuffer = null;
-        try {
-            output = new FileOutputStream(file, append);
+    private static void write(final File file, final String msg, final boolean append) {
 
-            // set up our output channel and byte buffer
-            mChannel = output.getChannel();
-            byteBuffer = ByteBuffer.allocate(BUFFER_SIZE);
+        new SafeAsyncTask<Void>() {
 
-            if (mChannel != null) {
-                byteBuffer.put(msg.getBytes());
-                byteBuffer.put(LINE_SEPARATOR.getBytes());
-                byteBuffer.flip();
-
-                mChannel.write(byteBuffer);
-                mChannel.force(true);
-            }
-        } catch (IOException e) {
-            Logger.d(TAG, "Exception writing cache " + file.getName(), e);
-        } finally {
-            if (byteBuffer != null) {
-                byteBuffer.clear();
-            }
-            if (mChannel != null) {
+            @Override
+            public Void call() throws Exception {
+                final FileOutputStream fos;
                 try {
-                    mChannel.close();
-                } catch (IOException e) {
-                    Logger.d(TAG, "Exception closing mChannel: ", e);
+                    fos = new FileOutputStream(file, append);
+                    try {
+                        fos.write(msg.getBytes());
+                    } catch (IOException e) {
+                        Logger.e(TAG, "write fail!!!", e);
+                    } finally {
+                        if (fos != null) {
+                            try {
+                                fos.close();
+                            } catch (IOException e) {
+                                Logger.d(TAG, "Exception closing stream: ", e);
+                            }
+                        }
+                    }
+                } catch (FileNotFoundException e) {
+                    Logger.e(TAG, "write fail!!!", e);
                 }
+
+                return null;
             }
-            if (output != null) {
-                try {
-                    output.close();
-                } catch (IOException e) {
-                    Logger.d(TAG, "Exception closing stream: ", e);
-                }
+
+            @Override
+            protected void onException(Exception e) throws RuntimeException {
+                super.onException(e);
+                //if (e instanceof OperationCanceledException) {
+                //}
+                Logger.d(TAG, "Log write fail!", e);
             }
-        }
+
+            @Override
+            protected void onSuccess(Void hasAuthenticated) throws Exception {
+                super.onSuccess(hasAuthenticated);
+                Logger.d(TAG, "Log written!");
+            }
+        }.execute();
     }
 
 
@@ -328,29 +339,17 @@ public final class Logger {
      * @return
      */
     public static String setLogPrefix(final String prefix) {
-        String str;
-        if (prefix.length() == 0) {
-            str = "logger-";
-        } else {
-            str = new StringBuilder().append(prefix).append("-").toString();
-        }
-        return str;
+        return (prefix.length() == 0) ? "logger-" : prefix + "-";
     }
 
     /**
      * 设置日志文件存放路径
      *
      * @param subPath 子路径("/Downloads/subPath")
-     * @return 日志文件路径
+     * @return
      */
     public static String setLogPath(final String subPath) {
-        String path;
-        if (subPath.length() == 0) {
-            path = new StringBuilder().append(DOWNLOADS_PATH).append("/logs").toString();
-        } else {
-            path = new StringBuilder().append(DOWNLOADS_PATH).append(subPath).toString();
-        }
-        return path;
+        return subPath.length() == 0 ? DOWNLOADS_PATH + "/logs" : subPath;
     }
 
 }
