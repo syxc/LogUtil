@@ -168,7 +168,7 @@ public final class Logger {
             logMap.put(Log.WARN, " WARN ");
             logMap.put(Log.ERROR, " ERROR ");
 
-            final StackTraceElement tag = new Throwable().fillInStackTrace().getStackTrace()[2];
+            final StackTraceElement tag = new Throwable().fillInStackTrace().getStackTrace()[2]; // TODO: ...
 
             msg = new StringBuilder()
                     .append("\r\n")
