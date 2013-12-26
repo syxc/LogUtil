@@ -1,6 +1,5 @@
 package org.syxc.util;
 
-import android.app.Application;
 import android.os.Environment;
 import android.util.Log;
 import android.util.SparseArray;
@@ -9,14 +8,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-//import org.syxc.util.GlobalExceptionHandler.UncaughtException;
 
 /**
  * A custom Android log class
@@ -150,35 +145,8 @@ public final class Logger {
         }
         // Write to file
         if (type >= level) {
-            writeLog(type, msg + '\n' + getStackTraceString(tr));
+            writeLog(type, msg + '\n' + Log.getStackTraceString(tr));
         }
-    }
-
-    /**
-     * Handy function to get a loggable stack trace from a Throwable
-     *
-     * @param tr An exception to log
-     */
-    private static String getStackTraceString(Throwable tr) {
-        if (tr == null) {
-            return "";
-        }
-
-        // This is to reduce the amount of log spew that apps do in the non-error
-        // condition of the network being unavailable.
-        Throwable t = tr;
-        while (t != null) {
-            if (t instanceof UnknownHostException) {
-                return "";
-            }
-            t = t.getCause();
-        }
-
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new FastPrintWriter(sw, false, 256);
-        tr.printStackTrace(pw);
-        pw.flush();
-        return sw.toString();
     }
 
     /**
@@ -255,13 +223,6 @@ public final class Logger {
         }
     }
 
-    public static void processGlobalException(Application application, boolean isWriteIntoFile) {
-        if (application != null) {
-            CrashHandler handler = new CrashHandler(application, isWriteIntoFile);
-            Thread.setDefaultUncaughtExceptionHandler(handler);
-        }
-    }
-
     private static String getDateFormat(String pattern) {
         final DateFormat format = new SimpleDateFormat(pattern);
         return format.format(new Date());
@@ -284,7 +245,7 @@ public final class Logger {
      */
     private static void write(final File file, final String msg, final boolean append) {
 
-        new SafeAsyncTask<Void>() {
+        new SafeAsyncTask<Void>() { // TODO: ...
 
             @Override
             public Void call() throws Exception {
@@ -309,20 +270,6 @@ public final class Logger {
                 }
 
                 return null;
-            }
-
-            @Override
-            protected void onException(Exception e) throws RuntimeException {
-                super.onException(e);
-                //if (e instanceof OperationCanceledException) {
-                //}
-                Logger.d(TAG, "Log write fail!", e);
-            }
-
-            @Override
-            protected void onSuccess(Void hasAuthenticated) throws Exception {
-                super.onSuccess(hasAuthenticated);
-                Logger.d(TAG, "Log written!");
             }
         }.execute();
     }

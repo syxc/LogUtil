@@ -1,61 +1,181 @@
 package org.syxc.util;
 
-import android.app.Application;
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.os.Environment;
+import android.os.Looper;
+import android.os.StatFs;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
+import java.io.File;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.Date;
+import java.util.Locale;
 
-
+/**
+ * {@link UncaughtExceptionHandler}  send an e-mail with
+ * some debug information to the developer.
+ * <p/>
+ * In the activity of onCreate calling methods:
+ * <p/>
+ * CrashHandler crashHandler = CrashHandler.getInstance();
+ * crashHandler.init(this);
+ */
 public class CrashHandler implements UncaughtExceptionHandler {
 
     private static final String TAG = "CrashHandler";
 
-    private Application mApplication;
-    private UncaughtExceptionHandler mDefaultHandler;
-    private boolean isWrite;
+    private static final String RECIPIENT = "gaibing2009@foxmail.com";
 
-    public CrashHandler(Application application, boolean write) {
-        this.mApplication = application;
-        this.isWrite = write;
+    private static CrashHandler instance;
+    private Context mContext;
+    private Thread.UncaughtExceptionHandler mDefaultHandler;
+
+    private CrashHandler() {
+    }
+
+    public static CrashHandler getInstance() {
+        if (instance == null) {
+            instance = new CrashHandler();
+        }
+        return instance;
+    }
+
+    public void init(Context ctx) {
+        mContext = ctx;
+        mDefaultHandler = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler(this);
     }
 
     @Override
-    public void uncaughtException(Thread thread, Throwable ex) {
-        if (isWrite) {
-            writeExceptionHandler(ex);
+    public void uncaughtException(Thread t, Throwable e) {
+        try {
+            StringBuilder report = new StringBuilder();
+            Date curDate = new Date();
+            report.append("Error Report collected on : ").append(curDate.toString()).append('\n').append('\n');
+            report.append("Infomations: ").append('\n');
+            addInformation(report);
+            report.append('\n').append('\n');
+            report.append("Stack:\n");
+            final Writer result = new StringWriter();
+            final PrintWriter printWriter = new PrintWriter(result);
+            e.printStackTrace(printWriter);
+            report.append(result.toString());
+            printWriter.close();
+            report.append('\n');
+            report.append("****  End of current Report ***");
+
+            Logger.e(TAG, "Error while sendErrorMail" + report);
+
+            sendErrorMail(report);
+        } catch (Throwable ignore) {
+            Logger.e(TAG, "Error while sending error e-mail", ignore);
         }
-        mDefaultHandler.uncaughtException(thread, ex);
     }
 
-    private void writeExceptionHandler(Throwable ex) {
-        String info = null;
-        ByteArrayOutputStream bos = null;
-        PrintStream printStream = null;
+    private StatFs getStatFs() {
+        File path = Environment.getDataDirectory();
+        return new StatFs(path.getPath());
+    }
+
+    private long getAvailableInternalMemorySize(StatFs stat) {
+        long blockSize = stat.getBlockSize();
+        long availableBlocks = stat.getAvailableBlocks();
+        return availableBlocks * blockSize;
+    }
+
+    private long getTotalInternalMemorySize(StatFs stat) {
+        long blockSize = stat.getBlockSize();
+        long totalBlocks = stat.getBlockCount();
+        return totalBlocks * blockSize;
+    }
+
+    private void addInformation(StringBuilder message) {
+        message.append("Locale: ").append(Locale.getDefault()).append('\n');
         try {
-            bos = new ByteArrayOutputStream();
-            printStream = new PrintStream(bos);
-            ex.printStackTrace(printStream);
-            byte[] data = bos.toByteArray();
-            info = new String(data);
-            data = null;
-            Logger.e(TAG, info);
-            // kill application
+            PackageManager pm = mContext.getPackageManager();
+            PackageInfo pi;
+            pi = pm.getPackageInfo(mContext.getPackageName(), 0);
+            message.append("Version: ").append(pi.versionName).append('\n');
+            message.append("Package: ").append(pi.packageName).append('\n');
         } catch (Exception e) {
-            Logger.e(TAG, e.getMessage());
-            // kill application
-        } finally {
-            try {
-                if (printStream != null) {
-                    printStream.close();
-                }
-                if (bos != null) {
-                    bos.close();
-                }
-            } catch (Exception e) {
-                // kill application
-            }
+            Logger.e("CustomExceptionHandler", "Error", e);
+            message.append("Could not get Version information for ").append(mContext.getPackageName());
         }
+        message.append("Phone Model: ").append(android.os.Build.MODEL).append('\n');
+        message.append("Android Version: ").append(android.os.Build.VERSION.RELEASE).append('\n');
+        message.append("Board: ").append(android.os.Build.BOARD).append('\n');
+        message.append("Brand: ").append(android.os.Build.BRAND).append('\n');
+        message.append("Device: ").append(android.os.Build.DEVICE).append('\n');
+        message.append("Host: ").append(android.os.Build.HOST).append('\n');
+        message.append("ID: ").append(android.os.Build.ID).append('\n');
+        message.append("Model: ").append(android.os.Build.MODEL).append('\n');
+        message.append("Product: ").append(android.os.Build.PRODUCT).append('\n');
+        message.append("Type: ").append(android.os.Build.TYPE).append('\n');
+
+        StatFs stat = getStatFs();
+
+        message.append("Total Internal memory: ")
+                .append(getTotalInternalMemorySize(stat))
+                .append('\n');
+        message.append("Available Internal memory: ")
+                .append(getAvailableInternalMemorySize(stat))
+                .append('\n');
+    }
+
+    /**
+     * This method for call alert dialog when application crashed!
+     *
+     * @param errorContent
+     */
+    private void sendErrorMail(final StringBuilder errorContent) {
+        final AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+
+        new Thread() {
+
+            @Override
+            public void run() {
+                Looper.prepare();
+
+                builder.setTitle("Sorry...!");
+                builder.create();
+                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        System.exit(0);
+                    }
+                });
+                builder.setPositiveButton("Report", new DialogInterface.OnClickListener() {
+
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Intent sendIntent = new Intent(Intent.ACTION_SEND);
+                        String subject = "Your App crashed! Fix it!";
+                        StringBuilder body = new StringBuilder("Yoddle");
+                        body.append('\n').append('\n');
+                        body.append(errorContent).append('\n').append('\n');
+                        sendIntent.setType("message/rfc822");
+                        sendIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{RECIPIENT});
+                        sendIntent.putExtra(Intent.EXTRA_TEXT, body.toString());
+                        sendIntent.putExtra(Intent.EXTRA_SUBJECT, subject);
+                        sendIntent.setType("message/rfc822");
+                        mContext.startActivity(Intent.createChooser(sendIntent, "Error Report"));
+                        System.exit(0);
+                    }
+                });
+                builder.setMessage("Unfortunately,This application has  stopped");
+                builder.show();
+
+                Looper.loop();
+            }
+        }.start();
     }
 
 }
