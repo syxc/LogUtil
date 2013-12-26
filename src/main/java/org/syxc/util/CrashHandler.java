@@ -31,7 +31,7 @@ public class CrashHandler implements UncaughtExceptionHandler {
 
     private static final String TAG = "CrashHandler";
 
-    private static final String RECIPIENT = "gaibing2009@foxmail.com";
+    private static final String RECIPIENT = "yourname@gmail.com";
 
     private static CrashHandler instance;
     private Context mContext;
