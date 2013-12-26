@@ -22,7 +22,7 @@ import java.util.Locale;
  * {@link UncaughtExceptionHandler}  send an e-mail with
  * some debug information to the developer.
  * <p/>
- * In the activity of onCreate calling methods:
+ * In the Activity of onCreate calling methods:
  * <p/>
  * CrashHandler crashHandler = CrashHandler.getInstance();
  * crashHandler.init(this);
