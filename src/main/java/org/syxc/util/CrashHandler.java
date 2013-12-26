@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Looper;
 import android.os.StatFs;
@@ -22,7 +23,7 @@ import java.util.Locale;
  * {@link UncaughtExceptionHandler}  send an e-mail with
  * some debug information to the developer.
  * <p/>
- * In the activity of onCreate calling methods:
+ * In the Activity of onCreate calling methods:
  * <p/>
  * CrashHandler crashHandler = CrashHandler.getInstance();
  * crashHandler.init(this);
@@ -56,22 +57,25 @@ public class CrashHandler implements UncaughtExceptionHandler {
     @Override
     public void uncaughtException(Thread t, Throwable e) {
         try {
-            StringBuilder report = new StringBuilder();
             Date curDate = new Date();
+
+            StringBuilder report = new StringBuilder();
             report.append("Error Report collected on : ").append(curDate.toString()).append('\n').append('\n');
             report.append("Infomations: ").append('\n');
             addInformation(report);
             report.append('\n').append('\n');
             report.append("Stack:\n");
+
             final Writer result = new StringWriter();
             final PrintWriter printWriter = new PrintWriter(result);
+
             e.printStackTrace(printWriter);
             report.append(result.toString());
             printWriter.close();
             report.append('\n');
             report.append("****  End of current Report ***");
 
-            Logger.e(TAG, "Error while sendErrorMail" + report);
+            Logger.e(TAG, "Error while sendErrorMail " + report);
 
             sendErrorMail(report);
         } catch (Throwable ignore) {
@@ -108,16 +112,16 @@ public class CrashHandler implements UncaughtExceptionHandler {
             Logger.e("CustomExceptionHandler", "Error", e);
             message.append("Could not get Version information for ").append(mContext.getPackageName());
         }
-        message.append("Phone Model: ").append(android.os.Build.MODEL).append('\n');
-        message.append("Android Version: ").append(android.os.Build.VERSION.RELEASE).append('\n');
-        message.append("Board: ").append(android.os.Build.BOARD).append('\n');
-        message.append("Brand: ").append(android.os.Build.BRAND).append('\n');
-        message.append("Device: ").append(android.os.Build.DEVICE).append('\n');
-        message.append("Host: ").append(android.os.Build.HOST).append('\n');
-        message.append("ID: ").append(android.os.Build.ID).append('\n');
-        message.append("Model: ").append(android.os.Build.MODEL).append('\n');
-        message.append("Product: ").append(android.os.Build.PRODUCT).append('\n');
-        message.append("Type: ").append(android.os.Build.TYPE).append('\n');
+        message.append("Phone Model: ").append(Build.MODEL).append('\n');
+        message.append("Android Version: ").append(Build.VERSION.RELEASE).append('\n');
+        message.append("Board: ").append(Build.BOARD).append('\n');
+        message.append("Brand: ").append(Build.BRAND).append('\n');
+        message.append("Device: ").append(Build.DEVICE).append('\n');
+        message.append("Host: ").append(Build.HOST).append('\n');
+        message.append("ID: ").append(Build.ID).append('\n');
+        message.append("Model: ").append(Build.MODEL).append('\n');
+        message.append("Product: ").append(Build.PRODUCT).append('\n');
+        message.append("Type: ").append(Build.TYPE).append('\n');
 
         StatFs stat = getStatFs();
 
@@ -157,20 +161,24 @@ public class CrashHandler implements UncaughtExceptionHandler {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         Intent sendIntent = new Intent(Intent.ACTION_SEND);
+
                         String subject = "Your App crashed! Fix it!";
                         StringBuilder body = new StringBuilder("Yoddle");
                         body.append('\n').append('\n');
                         body.append(errorContent).append('\n').append('\n');
+
                         sendIntent.setType("message/rfc822");
                         sendIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{RECIPIENT});
                         sendIntent.putExtra(Intent.EXTRA_TEXT, body.toString());
                         sendIntent.putExtra(Intent.EXTRA_SUBJECT, subject);
                         sendIntent.setType("message/rfc822");
+
                         mContext.startActivity(Intent.createChooser(sendIntent, "Error Report"));
+
                         System.exit(0);
                     }
                 });
-                builder.setMessage("Unfortunately,This application has  stopped");
+                builder.setMessage("Unfortunately, This application has stopped!");
                 builder.show();
 
                 Looper.loop();
