@@ -171,7 +171,6 @@ public class CrashHandler implements UncaughtExceptionHandler {
                         sendIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{RECIPIENT});
                         sendIntent.putExtra(Intent.EXTRA_TEXT, body.toString());
                         sendIntent.putExtra(Intent.EXTRA_SUBJECT, subject);
-                        sendIntent.setType("message/rfc822");
 
                         mContext.startActivity(Intent.createChooser(sendIntent, "Error Report"));
 
