@@ -20,7 +20,7 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * {@link UncaughtExceptionHandler}  send an e-mail with
+ * {@link UncaughtExceptionHandler} Send an email with
  * some debug information to the developer.
  * <p/>
  * In the Activity of onCreate calling methods:
@@ -39,6 +39,7 @@ public class CrashHandler implements UncaughtExceptionHandler {
     private Thread.UncaughtExceptionHandler mDefaultHandler;
 
     private CrashHandler() {
+
     }
 
     public static CrashHandler getInstance() {
@@ -60,11 +61,11 @@ public class CrashHandler implements UncaughtExceptionHandler {
             Date curDate = new Date();
 
             StringBuilder report = new StringBuilder();
-            report.append("Error Report collected on : ").append(curDate.toString()).append('\n').append('\n');
-            report.append("Infomations: ").append('\n');
+            report.append("Error report collected on: ").append(curDate.toString()).append('\n').append('\n');
+            report.append("Information: ").append('\n');
             addInformation(report);
             report.append('\n').append('\n');
-            report.append("Stack:\n");
+            report.append("Stack: \n");
 
             final Writer result = new StringWriter();
             final PrintWriter printWriter = new PrintWriter(result);
@@ -73,13 +74,13 @@ public class CrashHandler implements UncaughtExceptionHandler {
             report.append(result.toString());
             printWriter.close();
             report.append('\n');
-            report.append("****  End of current Report ***");
+            report.append("---  End of current Report ---");
 
             Logger.e(TAG, "Error while sendErrorMail " + report);
 
             sendErrorMail(report);
         } catch (Throwable ignore) {
-            Logger.e(TAG, "Error while sending error e-mail", ignore);
+            Logger.e(TAG, "Error while sending error email", ignore);
         }
     }
 
@@ -109,7 +110,7 @@ public class CrashHandler implements UncaughtExceptionHandler {
             message.append("Version: ").append(pi.versionName).append('\n');
             message.append("Package: ").append(pi.packageName).append('\n');
         } catch (Exception e) {
-            Logger.e("CustomExceptionHandler", "Error", e);
+            Logger.e(TAG, "Error", e);
             message.append("Could not get Version information for ").append(mContext.getPackageName());
         }
         message.append("Phone Model: ").append(Build.MODEL).append('\n');
@@ -136,9 +137,9 @@ public class CrashHandler implements UncaughtExceptionHandler {
     /**
      * This method for call alert dialog when application crashed!
      *
-     * @param errorContent
+     * @param err
      */
-    private void sendErrorMail(final StringBuilder errorContent) {
+    private void sendErrorMail(final StringBuilder err) {
         final AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
 
         new Thread() {
@@ -165,7 +166,7 @@ public class CrashHandler implements UncaughtExceptionHandler {
                         String subject = "Your App crashed! Fix it!";
                         StringBuilder body = new StringBuilder("Yoddle");
                         body.append('\n').append('\n');
-                        body.append(errorContent).append('\n').append('\n');
+                        body.append(err).append('\n').append('\n');
 
                         sendIntent.setType("message/rfc822");
                         sendIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{RECIPIENT});
