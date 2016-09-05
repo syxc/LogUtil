@@ -10,7 +10,7 @@ A custom Android log tools.
 
 使用 Gradle 编译需要注意的地方：
 
-- ```Gradle version >= Gradle 1.8```
+- Gradle version >= Gradle 1.8
 - 在工程目录下添加一个 ```local.properties``` 文件，以下是我机器上该文件的配置：
 
 	```bash
